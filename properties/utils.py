@@ -20,29 +20,34 @@ def get_all_properties():
     return properties
 
 def get_redis_cache_metrics():
-    # Get redis connection used by django redis
-    redis_conn = get_redis_connection('default')
+    try:
+        # Get redis connection used by django redis
+        redis_conn = get_redis_connection('default')
 
-    # Get server info
-    info = redis_conn.info()
+        # Get server info
+        info = redis_conn.info()
 
-    # Extract the hit and misses
-    hits = info.get("keyspace_hits", 0)
-    misses = info.get("keyspace_misses", 0)
+        # Extract the hit and misses
+        hits = info.get("keyspace_hits", 0)
+        misses = info.get("keyspace_misses", 0)
 
-    # Calculate hits ratio safely
-    total = hits + misses
-    if total == 0:
-        hit_ratio = 0.0
-    else:
-        hit_ratio = hits / total
+        # Calculate hits ratio safely
+        total_requests = hits + misses
+        hit_ratio = hits / total_requests if total_requests > 0 else 0
 
-    # Log the info for debugging
-    logging.info(f"Redis Cache Hits: {hits}, Misses: {misses}, Hit Ratio: {hit_ratio:.2f}")
+        # Log the info for debugging
+        logging.info(f"Redis Cache Hits: {hits}, Misses: {misses}, Hit Ratio: {hit_ratio:.2f}")
 
-    # Return a dictionary of metrics
-    return {
-        "hits": hits,
-        "misses": misses,
-        "hit_ratio": round(hit_ratio, 2),
-    }
+        # Return a dictionary of metrics
+        return {
+            "hits": hits,
+            "misses": misses,
+            "hit_ratio": round(hit_ratio, 2),
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch redis metrics: {e}")
+        return {
+            "hits": 0,
+            "misses": 0,
+            "hit_ratio": 0,
+        }
