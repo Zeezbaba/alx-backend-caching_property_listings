@@ -1,4 +1,6 @@
 from django.core.cache import cache
+from django_redis import get_redis_connection
+import logging
 from .models import Property
 
 def get_all_properties():
@@ -16,3 +18,31 @@ def get_all_properties():
         print("Loaded from cache")
 
     return properties
+
+def get_redis_cache_metrics():
+    # Get redis connection used by django redis
+    redis_conn = get_redis_connection('default')
+
+    # Get server info
+    info = redis_conn.info()
+
+    # Extract the hit and misses
+    hits = info.get("keyspace_hits", 0)
+    misses = info.get("keyspace_misses", 0)
+
+    # Calculate hits ratio safely
+    total = hits + misses
+    if total == 0:
+        hit_ratio = 0.0
+    else:
+        hit_ratio = hits / total
+
+    # Log the info for debugging
+    logging.info(f"Redis Cache Hits: {hits}, Misses: {misses}, Hit Ratio: {hit_ratio:.2f}")
+
+    # Return a dictionary of metrics
+    return {
+        "hits": hits,
+        "misses": misses,
+        "hit_ratio": round(hit_ratio, 2),
+    }
